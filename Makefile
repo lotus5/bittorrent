@@ -10,9 +10,9 @@ all: bittorent_protobuf
 bittorent_protobuf:
 	protoc-c --c_out=. protobuf/bittorent.proto
 
-chord: hash.o chord_arg_parser.o protobuf/bittorent.pb-c.c chord.c
+bittorent: protobuf/bittorent.pb-c.c bittorent.c
 
 clean:
-	rm -rf protobuf/*.pb-c.* *~ chord *.o example_hash
+	rm -rf protobuf/*.pb-c.* *~ 
 
 .PHONY : clean all
