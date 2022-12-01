@@ -51,6 +51,7 @@ int parse_torrent(char *torrent_filename) {
 	torrent = (struct bencode*)ben_decode(buf,len);
 	// decode fail
 	if(!torrent) {
+	  printf ("fail\n");
 		return 0;
 	}
 
@@ -65,7 +66,7 @@ int parse_torrent(char *torrent_filename) {
 
 	// get the piece length
 	piece_length = ((struct bencode_int*)ben_dict_get_by_str(info,"piece length"))->ll;
-	//printf(false,"parse_torrent piece_length=%d\n", piece_length);
+	printf("parse_torrent piece_length=%d\n", piece_length);
 
 	// get the concatened SHA1 from all pieces
 	sha1_pieces = ((struct bencode_str*)ben_dict_get_by_str(info,"pieces"))->s;
@@ -75,17 +76,21 @@ int parse_torrent(char *torrent_filename) {
 	// get the files dict from multiple file torrent. otherwise is a single file torrent
 	files = (struct bencode_list*)ben_dict_get_by_str(info,"files");
 	if (files) {
-		//printf(false, "parse_torrent multiple files\n");
+		printf( "parse_torrent multiple files\n");
 	}
 	else {
 		filename = (struct bencode_str*)ben_dict_get_by_str(info,"name");
 		file_length = ((struct bencode_int*)ben_dict_get_by_str(info,"length"))->ll;
-		//printf(false, "parse_torrent filename=%s\n", filename->s);
-		//printf(false, "parse_torrent file_length=%d\n", file_length);
-		//printf(false, "parse_torrent check_next_piece=%d\n", check_next_piece(filename->s, file_length, piece_length));
+		printf( "parse_torrent filename=%s\n", filename->s);
+		printf( "parse_torrent file_length=%d\n", file_length);
+		//		printf( "parse_torrent check_next_piece=%d\n", check_next_piece(filename->s, file_length, piece_length));
 	}
 
 	// clean memory and return
 	ben_free(torrent);
 	return 1;
+}
+
+int main() {
+  parse_torrent("flatland.torrent");
 }
