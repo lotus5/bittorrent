@@ -1,26 +1,14 @@
 
-require 'bencode'  # don't forget to do % gem install bencode
+require 'bencode'
 require 'digest/sha1'
 require 'socket'
 require 'cgi'
 
-meta = BEncode.load_file('flatland.torrent') # File or file path
+meta = BEncode.load_file('flatland.torrent')
 info_hash = Digest::SHA1.digest(meta["info"].bencode)
 info_hash = CGI.escape(info_hash)
-#info_hash = info_hash.downcase
 
-
-print meta
-print "\n"
-print meta["info"]["length"]
-print "\n"
-
-print info_hash
-print "\n"
-hash = "%d4Cz%edh%1c%b0l%5e%cb%cf%2c%7fY%0a%e8%a3%f7%3a%eb"
-print hash
-
-getRequest = "GET /announce?info_hash=#{hash}"
+getRequest = "GET /announce?info_hash=#{info_hash}"
 #should have a randomly generated peer_id
 getRequest += "&peer_id=01234567890123456789"
 #???
@@ -30,39 +18,31 @@ getRequest += "&downloaded=0"
 getRequest += "&left=#{meta["info"]["length"]}"
 #bobby said 30
 getRequest += "&numwant=30"
-#should generate 8 bytes-long key
-getRequest += "&key=12345678"
 getRequest += "&compact=1"
-#??? 1 in wireshark for transmission
-getRequest += "&supportcrypto=1"
 getRequest += "&event=started"
-#??? the client ip address?
-getRequest += "&ipv6=2600%3A4040%3A2c69%3Ab500%3Ad32%3Ac436%3Ad7df%3A9ca4"
 #http and traker ip and port
-getRequest += "HTTP/1.1\r\nHost:128.8.126.63:21212\r\n\r\n"
+getRequest += " HTTP/1.1\r\nHost:128.8.126.63:21212\r\n\r\n"
 
-
+#creating connection
 cSock = TCPSocket.open("128.8.126.63", 21212)
+#sending GET request
 cSock.puts(getRequest)
 
-sleep(10)
-print "\n"
-response = cSock.gets
-print response
-print "\n"
-response = cSock.gets
-print response
-print "\n"
-response = cSock.gets
-print response
-print "\n"
-response = cSock.gets
-print response
-print "\n"
-response += cSock.gets
+#receiving header
+response = cSock.gets("\r\n\r\n")
 print response
 print "\n"
 
+#extracting length of the bencode
+benLen = response.scan(/Content-Length: \d+/)
+benLen = benLen[0].scan(/\d+/)
+benLen = benLen[0].to_i
+
+#reading bencode from socket based on length
+bencode = cSock.read(benLen)
+peers = BEncode.load(bencode)
+print peers
+print "\n"
 
 cSock.close
 
