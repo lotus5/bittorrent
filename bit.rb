@@ -94,19 +94,29 @@ data = BEncode.load(bencode)
 
 numPeers = data["peers"].length/6
 
+#print data
+#print "\n"
+#print numPeers
+#print "\n"
+
 #parsing peers
-reg = ''
-for i in 1..numPeers do
-    reg += 'CCCCS'
-end
-peers = data["peers"].unpack(reg)
-peerInfo = []
+
+peerInfo = data["peers"].bytes.each_slice(6).to_a
+
 for i in 0..(numPeers - 1) do
-    peerInfo[i] = peers[5 * i].to_s + "." + peers[5 * i + 1].to_s + "." + peers[5 * i + 2].to_s + "." + peers[5 * i + 3].to_s + ":" + peers[5 * i + 4].to_s
+    peerIp = [4]
+    peerIp[0] = peerInfo[i][0].to_s
+    peerIp[1] = peerInfo[i][1].to_s
+    peerIp[2] = peerInfo[i][2].to_s
+    peerIp[3] = peerInfo[i][3].to_s
+    peerIp = peerIp.join(".")
+    peerPort = (peerInfo[i][4]*256 + peerInfo[i][5]).to_s
+    peerInfo[i] = peerIp + ":" + peerPort
 end
+
 print "peers parsed:\n"
 print peerInfo
-#print "\n\n"
+print "\n\n"
 
 
 #TODO: Peer communication
@@ -127,7 +137,7 @@ for i in 0..(numPeers - 1) do
     peerState[i][PEERCHOKING] = 1
     peerState[i][PEERINTERESTED] = 0
     #making connections with peers
-    peerAddr = peerInfo[i].split(":")
+    #peerAddr = peerInfo[i].split(":")
     #pSock[i] = TCPSocket.open(peerAddr[0], peerAddr[1])
 end
 
