@@ -23,8 +23,11 @@ PEERINTERESTED = 4
 
 #Parsing the torrent file
 meta = BEncode.load_file(ARGV[0])
-info_hash = Digest::SHA1.digest(meta["info"].bencode)
-info_hash = CGI.escape(info_hash)
+hex_info_hash = Digest::SHA1.hexdigest(meta["info"].bencode)
+hs_info_hash = Digest::SHA1.new.digest(meta["info"].bencode)
+info_hash = CGI.escape(hs_info_hash)
+p hex_info_hash
+
 
 #print meta["info"]
 
@@ -51,14 +54,12 @@ print "\npieces_hash for each piece is: \n"
 print pieces_hash
 print "\n\n"
 
-
 #tracker communication
 #forming the GET request
 getRequest = "GET /announce?info_hash=#{info_hash}"
-#TODO: randomly generated peer_id
 peer_id = generatePeerID()
 #p peer_id
-getRequest += "&peer_id=#{peer_id}"
+getRequest += "&peer_id=#{CGI.escape(peer_id)}"
 #TODO: port???
 getRequest += "&port=51413"
 getRequest += "&uploaded=0"
@@ -136,10 +137,39 @@ peerState = Array.new(height){Array.new(width)}
 
 #peerSock = TCPSocket.open("128.8.126.63", "51413")
 #print "connected\n"
-
+handshake = "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00#{hs_info_hash}#{peer_id}"
 for i in 0..(numPeers - 1) do
     #state for peers
-    peerState[i][SOCKET] = 9999
+=begin
+    This is how I think we should eventually connect to peers, this handles the case where the connection
+    is refused w/o our client crashing
+    
+    begin
+        x = peerInfo[i].split(":")
+        s = TCPSocket.open(x[0], x[1])
+    rescue => exception
+        p "connection to #{x[0]} at port #{x[1]} failed"
+    else
+        p "connection to #{x[0]} at port #{x[1]} successful"
+        peerState[i][SOCKET] = s #will eventually hold the socket after we create it
+        peerState[i][AMCHOKING] = 1
+        peerState[i][AMINTERESTED] = 0
+        peerState[i][PEERCHOKING] = 1
+        peerState[i][PEERINTERESTED] = 0
+    end
+=end
+    if (peerInfo[i] == "128.8.126.63:55555") then
+        p "connecting to Poole client"
+        x = peerInfo[i].split(":")
+        s = TCPSocket.open(x[0], x[1])
+        p "connected to Poole client"
+        s.puts(handshake)
+        p "sent handshake"
+    else
+        p "not the Poole client, ignoring"
+        s = 9999
+    end
+    peerState[i][SOCKET] = s #will eventually hold the socket after we create it
     peerState[i][AMCHOKING] = 1
     peerState[i][AMINTERESTED] = 0
     peerState[i][PEERCHOKING] = 1
@@ -153,12 +183,5 @@ end
 #print "\n"
 
 #send handshake to all peers
-handshake = ""
-
-
-
-
-
 cSock.close
-
 
