@@ -8,6 +8,13 @@ require 'cgi'
 # peerState with structure [[socket, am_choking, am_interested, peer_choking, peer_interested]]
 # bitField with length of numPiece, initialized with all 0
 
+def generatePeerID()
+    x = [*'a'..'z', *'A'..'Z', *0..9]
+    x = x.shuffle
+    x = x.slice(0..19)
+    x.join
+end
+
 SOCKET = 0
 AMCHOKING = 1
 AMINTERESTED = 2
@@ -49,7 +56,8 @@ print "\n\n"
 #forming the GET request
 getRequest = "GET /announce?info_hash=#{info_hash}"
 #TODO: randomly generated peer_id
-peer_id = "01234567890123456789"
+peer_id = generatePeerID()
+#p peer_id
 getRequest += "&peer_id=#{peer_id}"
 #TODO: port???
 getRequest += "&port=51413"
