@@ -8,8 +8,11 @@ require 'cgi'
 meta = BEncode.load_file(ARGV[0])
 info_hash = Digest::SHA1.digest(meta["info"].bencode)
 info_hash = CGI.escape(info_hash)
-print meta
+
+print "\ninfo_hash: "
+print info_hash
 print "\n\n"
+
 
 #forming the GET request
 getRequest = "GET /announce?info_hash=#{info_hash}"
@@ -20,7 +23,10 @@ getRequest += "&peer_id=#{myId}"
 getRequest += "&port=51413"
 getRequest += "&uploaded=0"
 getRequest += "&downloaded=0"
-getRequest += "&left=#{meta["info"]["length"]}"
+#for multi-file mode
+#length = meta["info"]["files"][0]["length"]
+length = meta["info"]["length"]
+getRequest += "&left=#{length}"
 #bobby said 30
 getRequest += "&numwant=30"
 getRequest += "&compact=1"
@@ -37,6 +43,7 @@ cSock.puts(getRequest)
 
 #receiving header
 respHeader = cSock.gets("\r\n\r\n")
+print "tracker response header: \n"
 print respHeader
 print "\n"
 
@@ -49,8 +56,6 @@ benLen = benLen[0].to_i
 bencode = cSock.read(benLen)
 data = BEncode.load(bencode)
 numPeers = data["peers"].length/6
-print data
-print "\n\n"
 
 #parsing peers
 reg = ''
@@ -58,15 +63,36 @@ for i in 1..numPeers do
     reg += 'CCCCS'
 end
 peers = data["peers"].unpack(reg)
-#print peers
-#print "\n"
 peerInfo = []
 for i in 0..(numPeers - 1) do
     peerInfo[i] = peers[5 * i].to_s + "." + peers[5 * i + 1].to_s + "." + peers[5 * i + 2].to_s + "." + peers[5 * i + 3].to_s + ":" + peers[5 * i + 4].to_s
 end
-
+print "peers parsed:\n"
 print peerInfo
 print "\n\n"
+
+#connecting to all peers
+pSock = []
+width = 5
+height = numPeers
+peerState = Array.new(height){Array.new(width)}
+for i in 0..(numPeers - 1) do
+    #state for peers
+    peerState[i][0] = 9999
+    peerState[i][1] = 1
+    peerState[i][2] = 0
+    peerState[i][3] = 1
+    peerState[i][4] = 0
+    #making connections with peers
+    peerAddr = peerInfo[i].split(":")
+    #pSock[i] = TCPSocket.open(peerAddr[0], peerAddr[1])
+end
+
+print peerState
+print "\n"
+
+#send handshake to all peers
+
 
 
 
