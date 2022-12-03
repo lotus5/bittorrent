@@ -23,10 +23,8 @@ PEERINTERESTED = 4
 
 #Parsing the torrent file
 meta = BEncode.load_file(ARGV[0])
-hex_info_hash = Digest::SHA1.hexdigest(meta["info"].bencode)
-hs_info_hash = Digest::SHA1.new.digest(meta["info"].bencode)
-info_hash = CGI.escape(hs_info_hash)
-p hex_info_hash
+info_hash = Digest::SHA1.digest(meta["info"].bencode)
+info_hash = CGI.escape(info_hash)
 
 
 #print meta["info"]
@@ -46,12 +44,10 @@ for i in 0..(pieces_hash.length - 1) do
 end
 
 print "\nTorrent file accepted. Trying to download the file <#{name}> with total length of #{totalLen}"
-print "\ninfo_hash for file is: "
-print info_hash
+print "\ninfo_hash for file is: #{info_hash}"
 print "\n\n"
 print "There are #{numPiece} pieces with piece length #{pieceLen}\n"
-print "\npieces_hash for each piece is: \n"
-print pieces_hash
+print "\npieces_hash for each piece is: #{pieces_hash}\n"
 print "\n\n"
 
 #tracker communication
@@ -97,8 +93,8 @@ benLen = benLen[0].to_i
 bencode = cSock.read(benLen)
 data = BEncode.load(bencode)
 
-#print data
-#print "\n"
+print data
+print "\n"
 #print "\n"
 
 numPeers = data["peers"].length/6
@@ -130,14 +126,13 @@ print "\n\n"
 
 #TODO: Peer communication
 #connecting to all peers
-pSock = []
-width = 5
-height = numPeers
-peerState = Array.new(height){Array.new(width)}
+peerState = Array.new(numPeers){Array.new(5)}
 
 #peerSock = TCPSocket.open("128.8.126.63", "51413")
 #print "connected\n"
-handshake = "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00#{hs_info_hash}#{peer_id}"
+hex_info_hash = Digest::SHA1.digest(meta["info"].bencode)
+handshake = "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00#{hex_info_hash}#{peer_id}"
+p handshake
 for i in 0..(numPeers - 1) do
     #state for peers
 =begin
@@ -163,10 +158,11 @@ for i in 0..(numPeers - 1) do
         x = peerInfo[i].split(":")
         s = TCPSocket.open(x[0], x[1])
         p "connected to Poole client"
-        s.puts(handshake)
+        s.send(handshake, handshake.length)
         p "sent handshake"
+        s.gets()
     else
-        p "not the Poole client, ignoring"
+        #p "not the Poole client, ignoring"
         s = 9999
     end
     peerState[i][SOCKET] = s #will eventually hold the socket after we create it
@@ -182,6 +178,5 @@ end
 #print peerState
 #print "\n"
 
-#send handshake to all peers
 cSock.close
 
