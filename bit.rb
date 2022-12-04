@@ -92,6 +92,61 @@ def generatePeerID()
     x.join
 end
 
+# Parsing the message from other peers
+def parseResponse(s)
+    len = s.read(4).unpack('N')[0]
+        p "message length: #{len}"
+    if len == 0
+        # received a keep alive message
+    else
+        mId = s.read(1).unpack('C')[0]
+        p "message id: #{mId}"
+        if mId == 0
+            # received a choke message
+            p "received a choke message"
+        elsif mId == 1
+            # received an unchoke message
+            p "received an unchoke message"
+        elsif mId == 2
+            # received an interested message
+            p "received an interested message"
+        elsif mId == 3
+            # received a not interested message
+            p "received a not interested message"
+        elsif mId == 4
+            # received a have message
+            p "received a have message"
+            pieceId = s.read(4)
+            p pieceId
+        elsif (mId == 5)
+            # received a bitfield message
+            # TODO: this will work for flatland but probably not if there are more pieces
+            p "received a bitfield message"
+            recvBF = s.read(len - 1).unpack('C')[0].to_s(2)
+            p recvBF
+        elsif mId == 6
+            # received a request message
+            p "received a request message"
+            pId = s.read(4)
+            pBeg = s.read(4)
+            pLen = s.read(4)
+        elsif mId == 7
+            # received a piece message
+            p "received a piece message"
+        elsif mId == 8
+            # received a cancel message
+            p "received a cancel message"
+            pId = s.read(4)
+            pBeg = s.read(4)
+            pLen = s.read(4)
+        elsif mId == 9
+            # received a port message
+            p "received a cancel message"
+            pId = s.read(2)
+        end
+    end
+end
+
 # Parsing the torrent file
 meta = BEncode.load_file(ARGV[0])
 compact = ARGV[1]
@@ -234,12 +289,14 @@ for i in 0..(numPeers - 1) do
         # parsing the received handshake
         pstrlen = s.read(1).unpack('C')
         recvHs = s.read(pstrlen[0] + 8 + 20 + 20)
-        p recvHs
+        #p recvHs
+
+        parseResponse(s)
 
         # testing for sending messages
-        test = haveMessage(1)
-        p test
-        s.write(test[0], test[1])
+        #test = haveMessage(1)
+        #p test
+        #s.write(test[0], test[1])
     else
         #p "not the Poole client, ignoring"
         s = 9999
