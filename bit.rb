@@ -3,7 +3,7 @@ require 'digest/sha1'
 require 'socket'
 require 'cgi'
 
-# call the program with ruby bit.rb <filename.torrent>
+# call the program with ruby bit.rb <filename.torrent> <1 for compact, 0 for noncompact>
 # pieces_hash is a list of hashes for each piece of the file
 # peerState with structure [[socket, am_choking, am_interested, peer_choking, peer_interested]]
 # bitField with length of numPiece, initialized with all 0
@@ -23,6 +23,7 @@ PEERINTERESTED = 4
 
 #Parsing the torrent file
 meta = BEncode.load_file(ARGV[0])
+compact = ARGV[1]
 info_hash = Digest::SHA1.digest(meta["info"].bencode)
 info_hash = CGI.escape(info_hash)
 
@@ -44,11 +45,9 @@ for i in 0..(pieces_hash.length - 1) do
 end
 
 print "\nTorrent file accepted. Trying to download the file <#{name}> with total length of #{totalLen}"
-print "\ninfo_hash for file is: #{info_hash}"
-print "\n\n"
+print "\ninfo_hash for file is: #{info_hash}\n\n"
 print "There are #{numPiece} pieces with piece length #{pieceLen}\n"
-print "\npieces_hash for each piece is: #{pieces_hash}\n"
-print "\n\n"
+print "\npieces_hash for each piece is: #{pieces_hash}\n\n"
 
 #tracker communication
 #forming the GET request
@@ -66,7 +65,8 @@ length = totalLen
 getRequest += "&left=#{length}"
 #bobby said 30
 getRequest += "&numwant=30"
-getRequest += "&compact=1"
+# *********************************** compact ******************************************
+getRequest += "&compact=#{compact}"
 getRequest += "&event=started"
 #http and traker ip and port
 trackerInfo = meta["announce"].split("/")
@@ -93,11 +93,11 @@ benLen = benLen[0].to_i
 bencode = cSock.read(benLen)
 data = BEncode.load(bencode)
 
-print data
-print "\n"
+#print data
+#print "\n"
 #print "\n"
 
-numPeers = data["peers"].length/6
+
 
 #print data
 #print "\n"
@@ -106,23 +106,36 @@ numPeers = data["peers"].length/6
 
 #parsing peers
 
-peerInfo = data["peers"].bytes.each_slice(6).to_a
-
-for i in 0..(numPeers - 1) do
-    peerIp = [4]
-    peerIp[0] = peerInfo[i][0].to_s
-    peerIp[1] = peerInfo[i][1].to_s
-    peerIp[2] = peerInfo[i][2].to_s
-    peerIp[3] = peerInfo[i][3].to_s
-    peerIp = peerIp.join(".")
-    peerPort = (peerInfo[i][4]*256 + peerInfo[i][5]).to_s
-    peerInfo[i] = peerIp + ":" + peerPort
+peerInfo = []
+if data["peers"].is_a?(String)
+    #compact response
+    peerInfo = data["peers"].bytes.each_slice(6).to_a
+    numPeers = data["peers"].length/6
+    for i in 0..(numPeers - 1) do
+        peerIp = [4]
+        peerIp[0] = peerInfo[i][0].to_s
+        peerIp[1] = peerInfo[i][1].to_s
+        peerIp[2] = peerInfo[i][2].to_s
+        peerIp[3] = peerInfo[i][3].to_s
+        peerIp = peerIp.join(".")
+        peerPort = (peerInfo[i][4]*256 + peerInfo[i][5]).to_s
+        peerInfo[i] = peerIp + ":" + peerPort
+    end
+else
+    #noncompact response
+    for i in 0..30 do
+        if data["peers"][i] == nil
+            break
+        else
+            peerInfo[i] = data["peers"][i]["ip"] + ":" + data["peers"][i]["port"].to_s
+        end
+    end
 end
+numPeers = peerInfo.length
 
 print "peers parsed:\n"
 print peerInfo
 print "\n\n"
-
 
 #TODO: Peer communication
 #connecting to all peers
