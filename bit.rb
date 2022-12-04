@@ -98,6 +98,7 @@ def parseResponse(s)
         p "message length: #{len}"
     if len == 0
         # received a keep alive message
+        p "received a keep alive message"
     else
         mId = s.read(1).unpack('C')[0]
         p "message id: #{mId}"
@@ -116,33 +117,39 @@ def parseResponse(s)
         elsif mId == 4
             # received a have message
             p "received a have message"
-            pieceId = s.read(4)
-            p pieceId
+            pieceId = s.read(4).unpack('N')
+            p "Peer have pieceId: #{pieceId}"
         elsif (mId == 5)
             # received a bitfield message
-            # TODO: this will work for flatland but probably not if there are more pieces
             p "received a bitfield message"
-            recvBF = s.read(len - 1).unpack('C')[0].to_s(2)
-            p recvBF
+            recvBF = s.read(len - 1).bytes.each_slice(6).to_a()[0]
+            for i in 0..(recvBF.length - 1)
+                recvBF[i] = recvBF[i].to_s(2)
+            end
+            recvBF = recvBF.join("")
+            p "bitfield received: #{recvBF}"
         elsif mId == 6
             # received a request message
             p "received a request message"
-            pId = s.read(4)
-            pBeg = s.read(4)
-            pLen = s.read(4)
+            pId = s.read(4).unpack('N')[0]
+            pBeg = s.read(4).unpack('N')[0]
+            pLen = s.read(4).unpack('N')[0]
+            p "pieceId: #{pId}, begin: #{pBeg}, length: #{pLen}"
         elsif mId == 7
             # received a piece message
             p "received a piece message"
         elsif mId == 8
             # received a cancel message
             p "received a cancel message"
-            pId = s.read(4)
-            pBeg = s.read(4)
-            pLen = s.read(4)
+            pId = s.read(4).unpack('N')[0]
+            pBeg = s.read(4).unpack('N')[0]
+            pLen = s.read(4).unpack('N')[0]
+            p "pieceId: #{pId}, begin: #{pBeg}, length: #{pLen}"
         elsif mId == 9
             # received a port message
-            p "received a cancel message"
-            pId = s.read(2)
+            p "received a port message"
+            port = s.read(2).unpack('n')[0]
+            p "port: #{port}"
         end
     end
 end
@@ -166,10 +173,11 @@ for i in 0..(pieces_hash.length - 1) do
     pieces_hash[i] = pieces_hash[i].unpack('H*')
 end
 
-print "\nTorrent file accepted. Trying to download the file <#{name}> with total length of #{totalLen}"
-print "\ninfo_hash for file is: #{info_hash}\n\n"
-print "There are #{numPiece} pieces with piece length #{pieceLen}\n"
-print "\npieces_hash for each piece is: #{pieces_hash}\n\n"
+
+print "\nTorrent file accepted. Trying to download the file <#{name}> with total length of #{totalLen}\n"
+print "info_hash for file is: #{info_hash}\n"
+print "There are #{numPiece} pieces with piece length #{pieceLen}\n\n"
+print "pieces_hash for each piece is: #{pieces_hash}\n\n"
 
 trackerInfo = meta["announce"].split("/")
 trackerInfo = trackerInfo[2].split(":")
@@ -248,9 +256,7 @@ else
 end
 numPeers = peerInfo.length
 
-print "peers parsed:\n"
-print peerInfo
-print "\n\n"
+print "peers parsed:\n#{peerInfo}\n\n"
 
 #TODO: Peer communication
 # Connecting to all peers
@@ -291,6 +297,7 @@ for i in 0..(numPeers - 1) do
         recvHs = s.read(pstrlen[0] + 8 + 20 + 20)
         #p recvHs
 
+        #testing for receiving messages
         parseResponse(s)
 
         # testing for sending messages
@@ -310,11 +317,23 @@ for i in 0..(numPeers - 1) do
     #peerAddr = peerInfo[i].split(":")
     #pSock[i] = TCPSocket.open(peerAddr[0], peerAddr[1])
 end
-#print peerState
-#print "\n"
+# p peerState
 
-#whenever a client connects we send a biffield message (if we have a piece)
+# whenever a client connects we send a biffield message (if we have a piece)
 
-sleep(3)
+# for testing messages parsing with the send.rb
+=begin
+test = -1
+
+server = TCPServer.new 2000 # Server bind to port 2000
+while test == -1
+  test = server.accept    # Wait for a client to connect
+end
+
+parseResponse(test)
+
+test.close
+=end
+
 cSock.close
 
