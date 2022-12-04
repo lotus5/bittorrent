@@ -8,6 +8,13 @@ require 'cgi'
 # peerState with structure [[socket, am_choking, am_interested, peer_choking, peer_interested]]
 # bitField with length of numPiece, initialized with all 0
 
+def generatePeerID()
+    x = [*'a'..'z', *'A'..'Z', *0..9]
+    x = x.shuffle
+    x = x.slice(0..19)
+    x.join
+end
+
 SOCKET = 0
 AMCHOKING = 1
 AMINTERESTED = 2
@@ -18,6 +25,7 @@ PEERINTERESTED = 4
 meta = BEncode.load_file(ARGV[0])
 info_hash = Digest::SHA1.digest(meta["info"].bencode)
 info_hash = CGI.escape(info_hash)
+
 
 #print meta["info"]
 
@@ -36,21 +44,18 @@ for i in 0..(pieces_hash.length - 1) do
 end
 
 print "\nTorrent file accepted. Trying to download the file <#{name}> with total length of #{totalLen}"
-print "\ninfo_hash for file is: "
-print info_hash
+print "\ninfo_hash for file is: #{info_hash}"
 print "\n\n"
 print "There are #{numPiece} pieces with piece length #{pieceLen}\n"
-print "\npieces_hash for each piece is: \n"
-print pieces_hash
+print "\npieces_hash for each piece is: #{pieces_hash}\n"
 print "\n\n"
-
 
 #tracker communication
 #forming the GET request
 getRequest = "GET /announce?info_hash=#{info_hash}"
-#TODO: randomly generated peer_id
-peer_id = "01234567890123456789"
-getRequest += "&peer_id=#{peer_id}"
+peer_id = generatePeerID()
+#p peer_id
+getRequest += "&peer_id=#{CGI.escape(peer_id)}"
 #TODO: port???
 getRequest += "&port=51413"
 getRequest += "&uploaded=0"
@@ -88,59 +93,90 @@ benLen = benLen[0].to_i
 bencode = cSock.read(benLen)
 data = BEncode.load(bencode)
 
-#print data
-#print "\n"
+print data
+print "\n"
 #print "\n"
 
 numPeers = data["peers"].length/6
 
+#print data
+#print "\n"
+#print numPeers
+#print "\n"
+
 #parsing peers
-reg = ''
-for i in 1..numPeers do
-    reg += 'CCCCS'
-end
-peers = data["peers"].unpack(reg)
-peerInfo = []
+
+peerInfo = data["peers"].bytes.each_slice(6).to_a
+
 for i in 0..(numPeers - 1) do
-    peerInfo[i] = peers[5 * i].to_s + "." + peers[5 * i + 1].to_s + "." + peers[5 * i + 2].to_s + "." + peers[5 * i + 3].to_s + ":" + peers[5 * i + 4].to_s
+    peerIp = [4]
+    peerIp[0] = peerInfo[i][0].to_s
+    peerIp[1] = peerInfo[i][1].to_s
+    peerIp[2] = peerInfo[i][2].to_s
+    peerIp[3] = peerInfo[i][3].to_s
+    peerIp = peerIp.join(".")
+    peerPort = (peerInfo[i][4]*256 + peerInfo[i][5]).to_s
+    peerInfo[i] = peerIp + ":" + peerPort
 end
+
 print "peers parsed:\n"
 print peerInfo
-#print "\n\n"
+print "\n\n"
 
 
 #TODO: Peer communication
 #connecting to all peers
-pSock = []
-width = 5
-height = numPeers
-peerState = Array.new(height){Array.new(width)}
+peerState = Array.new(numPeers){Array.new(5)}
 
 #peerSock = TCPSocket.open("128.8.126.63", "51413")
 #print "connected\n"
-
+hex_info_hash = Digest::SHA1.digest(meta["info"].bencode)
+handshake = "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00#{hex_info_hash}#{peer_id}"
+p handshake
 for i in 0..(numPeers - 1) do
     #state for peers
-    peerState[i][SOCKET] = 9999
+=begin
+    This is how I think we should eventually connect to peers, this handles the case where the connection
+    is refused w/o our client crashing
+    
+    begin
+        x = peerInfo[i].split(":")
+        s = TCPSocket.open(x[0], x[1])
+    rescue => exception
+        p "connection to #{x[0]} at port #{x[1]} failed"
+    else
+        p "connection to #{x[0]} at port #{x[1]} successful"
+        peerState[i][SOCKET] = s #will eventually hold the socket after we create it
+        peerState[i][AMCHOKING] = 1
+        peerState[i][AMINTERESTED] = 0
+        peerState[i][PEERCHOKING] = 1
+        peerState[i][PEERINTERESTED] = 0
+    end
+=end
+    if (peerInfo[i] == "128.8.126.63:55555") then
+        p "connecting to Poole client"
+        x = peerInfo[i].split(":")
+        s = TCPSocket.open(x[0], x[1])
+        p "connected to Poole client"
+        s.send(handshake, handshake.length)
+        p "sent handshake"
+        s.gets()
+    else
+        #p "not the Poole client, ignoring"
+        s = 9999
+    end
+    peerState[i][SOCKET] = s #will eventually hold the socket after we create it
     peerState[i][AMCHOKING] = 1
     peerState[i][AMINTERESTED] = 0
     peerState[i][PEERCHOKING] = 1
     peerState[i][PEERINTERESTED] = 0
     #making connections with peers
-    peerAddr = peerInfo[i].split(":")
+    #peerAddr = peerInfo[i].split(":")
     #pSock[i] = TCPSocket.open(peerAddr[0], peerAddr[1])
 end
 
 #print peerState
 #print "\n"
 
-#send handshake to all peers
-handshake = ""
-
-
-
-
-
 cSock.close
-
 
