@@ -41,7 +41,7 @@ def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
     m_have = "\x00\x00\x00\x05\x04#{id}"
     [m_have, 9]     #----> should have length of 9(len:4 + id:1 + index:4)
-    [m_have, 16]    #----> the send socket won't take anything under 16 as length for sending this message.
+    #[m_have, 16]    #----> the send socket won't take anything under 16 as length for sending this message.
 end
 
 def bitfieldMessage(bitArray)                   # <len=0001+X><id=5><bitfield>
@@ -228,9 +228,14 @@ for i in 0..(numPeers - 1) do
         x = peerInfo[i].split(":")
         s = TCPSocket.open(x[0], x[1])
         p "connected to Poole client"
-        s.send(handshake, handshake.length)
+        s.write(handshake, handshake.length)
         p "handshake sent"
         s.gets()
+
+        # testing for sending messages
+        test = haveMessage(1)
+        p test
+        s.write(test[0], test[1])
     else
         #p "not the Poole client, ignoring"
         s = 9999
