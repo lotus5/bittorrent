@@ -2,6 +2,7 @@ require 'bencode'
 require 'digest/sha1'
 require 'socket'
 require 'cgi'
+require_relative 'bitData'
 
 # call the program with ruby bit.rb <filename.torrent>
 # pieces_hash is a list of hashes for each piece of the file
@@ -35,8 +36,8 @@ name = meta["info"]["name"]
 totalLen = meta["info"]["length"]
 pieceLen = meta["info"]["piece length"]
 numPiece = ((totalLen.to_f)/(pieceLen.to_f)).ceil
-bitField = Array.new(numPiece, 0)
-
+bitInfo = BitData.new(numPiece, pieceLen)
+print "stuff here: #{bitInfo.bitMap}\n"
 #the hashes for each piece
 pieces_hash = meta["info"]["pieces"].scan(/.{20}/)
 for i in 0..(pieces_hash.length - 1) do
@@ -123,7 +124,6 @@ print "peers parsed:\n"
 print peerInfo
 print "\n\n"
 
-
 #TODO: Peer communication
 #connecting to all peers
 peerState = Array.new(numPeers){Array.new(5)}
@@ -160,7 +160,15 @@ for i in 0..(numPeers - 1) do
         p "connected to Poole client"
         s.send(handshake, handshake.length)
         p "sent handshake"
-        s.gets()
+
+        handshakeResp = s.recv(68).bytes 
+        handshakeResp.slice!(0..19)           # remove the first 20 bytes signifying BitTorrent Protocol
+        p "received handshake: #{handshakeResp}\n"
+
+        # Receiving Bitfield from peer
+        msgLen = s.recv(4).unpack('N').first
+        msgInfo = s.recv(msgLen).bytes          # How exactly do we interpret the bitfield data?
+        p "Bitfield data: #{msgInfo}"
     else
         #p "not the Poole client, ignoring"
         s = 9999
@@ -179,4 +187,3 @@ end
 #print "\n"
 
 cSock.close
-
