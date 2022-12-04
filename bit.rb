@@ -172,7 +172,7 @@ if data["peers"].is_a?(String)
     peerInfo = data["peers"].bytes.each_slice(6).to_a
     numPeers = data["peers"].length/6
     for i in 0..(numPeers - 1) do
-        peerIp = [4]
+        peerIp = []
         peerIp[0] = peerInfo[i][0].to_s
         peerIp[1] = peerInfo[i][1].to_s
         peerIp[2] = peerInfo[i][2].to_s
@@ -230,7 +230,11 @@ for i in 0..(numPeers - 1) do
         p "connected to Poole client"
         s.write(handshake, handshake.length)
         p "handshake sent"
-        s.gets()
+
+        # parsing the received handshake
+        pstrlen = s.read(1).unpack('C')
+        recvHs = s.read(pstrlen[0] + 8 + 20 + 20)
+        p recvHs
 
         # testing for sending messages
         test = haveMessage(1)
