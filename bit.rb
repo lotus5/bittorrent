@@ -66,7 +66,12 @@ def requestMessage(id, beg, len)                # <len=0013><id=6><index><begin>
     "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
 end
 
-# TODO: pieceMessage
+def pieceMessage(id, beg, data)                 # <len=0009+X><id=7><index><begin><block>
+    mLen = [(9 + data.length)].pack('N')
+    id = [id].pack('N')
+    beg = [beg].pack('N')
+    "#{mLen}\x07#{id}#{beg}#{data}"
+end
 
 def cancelMessage(id, beg, len)                 # <len=0013><id=8><index><begin><length>
     id = [id].pack('N')
@@ -113,7 +118,7 @@ def parseResponse(s)
         elsif mId == 4
             # received a have message
             p "received a have message"
-            pieceId = s.read(4).unpack('N')
+            pieceId = s.read(4).unpack('N')[0]
             p "Peer have pieceId: #{pieceId}"
         elsif (mId == 5)
             # received a bitfield message
@@ -307,9 +312,6 @@ for i in 0..(numPeers - 1) do
         s.write(request)
         #testing for receiving messages
         
-        parseResponse(s)
-        parseResponse(s)
-        parseResponse(s)
         parseResponse(s)
 
     else
