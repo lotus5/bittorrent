@@ -36,7 +36,7 @@ end
 def notInterestedMessage                        # <len=0001><id=3>
     "\x00\x00\x00\x01\x03"
 end
-# TODO: weird performance with length in send
+
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
     "\x00\x00\x00\x05\x04#{id}"
@@ -117,7 +117,7 @@ def parseResponse(s)
         elsif (mId == 5)
             # received a bitfield message
             p "received a bitfield message"
-            recvBF = s.read(len - 1).bytes.each_slice(6).to_a()[0]
+            recvBF = s.read(len - 1).bytes.each_slice(8).to_a()[0]
             for i in 0..(recvBF.length - 1)
                 recvBF[i] = recvBF[i].to_s(2)
             end
