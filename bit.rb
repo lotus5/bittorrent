@@ -311,6 +311,7 @@ for i in 0..(numPeers - 1) do
 
         parseResponse(s)    # receive the unchoke message
 
+        # the size is set to 32 for testing purposes only, should be 16384 for real implementation
         request = requestMessage(0, 0, 32)
         s.write(request)
         
