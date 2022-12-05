@@ -133,6 +133,10 @@ def parseResponse(s)
         elsif mId == 7
             # received a piece message
             p "received a piece message"
+            pId = s.read(4).unpack('N')[0]
+            pBeg = s.read(4).unpack('N')[0]
+            pData = s.read(len - 9)
+            p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData}"
         elsif mId == 8
             # received a cancel message
             p "received a cancel message"
@@ -307,11 +311,15 @@ for i in 0..(numPeers - 1) do
 
         parseResponse(s)    # receive the unchoke message
 
-        request = requestMessage(0, 0, 1280)
+        request = requestMessage(0, 0, 32)
         s.write(request)
         
-        x = s.read(1289)
-        p x
+        #x = s.read(1289)
+        #p x
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
 
         # --- End Downloading File 
 
