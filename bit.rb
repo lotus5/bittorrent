@@ -36,7 +36,7 @@ end
 def notInterestedMessage                        # <len=0001><id=3>
     "\x00\x00\x00\x01\x03"
 end
-# TODO: weird performance with length in send
+
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
     "\x00\x00\x00\x05\x04#{id}"
@@ -66,7 +66,12 @@ def requestMessage(id, beg, len)                # <len=0013><id=6><index><begin>
     "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
 end
 
-# TODO: pieceMessage
+def pieceMessage(id, beg, data)                 # <len=0009+X><id=7><index><begin><block>
+    mLen = [(9 + data.length)].pack('N')
+    id = [id].pack('N')
+    beg = [beg].pack('N')
+    "#{mLen}\x07#{id}#{beg}#{data}"
+end
 
 def cancelMessage(id, beg, len)                 # <len=0013><id=8><index><begin><length>
     id = [id].pack('N')
@@ -112,12 +117,12 @@ def parseResponse(s)
         elsif mId == 4
             # received a have message
             p "received a have message"
-            pieceId = s.read(4).unpack('N')
+            pieceId = s.read(4).unpack('N')[0]
             p "Peer have pieceId: #{pieceId}"
         elsif (mId == 5)
             # received a bitfield message
             p "received a bitfield message"
-            recvBF = s.read(len - 1).bytes.each_slice(6).to_a()[0]
+            recvBF = s.read(len - 1).bytes.each_slice(8).to_a()[0]
             for i in 0..(recvBF.length - 1)
                 recvBF[i] = recvBF[i].to_s(2)
             end
@@ -133,6 +138,10 @@ def parseResponse(s)
         elsif mId == 7
             # received a piece message
             p "received a piece message"
+            pId = s.read(4).unpack('N')[0]
+            pBeg = s.read(4).unpack('N')[0]
+            pData = s.read(len - 9)
+            p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData}"
         elsif mId == 8
             # received a cancel message
             p "received a cancel message"
@@ -307,11 +316,16 @@ for i in 0..(numPeers - 1) do
 
         parseResponse(s)    # receive the unchoke message
 
-        request = requestMessage(0, 0, 1280)
+        # the size is set to 32 for testing purposes only, should be 16384 for real implementation
+        request = requestMessage(0, 0, 32)
         s.write(request)
         
-        x = s.read(1289)
-        p x
+        #x = s.read(1289)
+        #p x
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
 
         # --- End Downloading File 
 

@@ -25,7 +25,7 @@ end
 def notInterestedMessage                        # <len=0001><id=3>
     "\x00\x00\x00\x01\x03"
 end
-# TODO: weird performance with length in send
+
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
     "\x00\x00\x00\x05\x04#{id}"
@@ -55,7 +55,12 @@ def requestMessage(id, beg, len)                # <len=0013><id=6><index><begin>
     "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
 end
 
-# TODO: pieceMessage
+def pieceMessage(id, beg, data)                 # <len=0009+X><id=7><index><begin><block>
+    mLen = [(9 + data.length)].pack('N')
+    id = [id].pack('N')
+    beg = [beg].pack('N')
+    "#{mLen}\x07#{id}#{beg}#{data}"
+end
 
 def cancelMessage(id, beg, len)                 # <len=0013><id=8><index><begin><length>
     id = [id].pack('N')
@@ -87,7 +92,8 @@ test = bitfieldMessage([1,1,1,1,1,1,1,1,1])
 cSock.write(test)
 test = requestMessage(1, 0, 128)
 cSock.write(test)
-#TODO: piece
+test = pieceMessage(1, 0, "abcdefghig")
+cSock.write(test)
 test = cancelMessage(1, 0, 128)
 cSock.write(test)
 test = portMessage(2000)
