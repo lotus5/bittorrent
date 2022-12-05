@@ -4,7 +4,7 @@ require 'socket'
 require 'cgi'
 
 # This program is used to test for messages sending, receiving and parsing
-# First run bit.rb, then run this program as ruby bit.rb 2000
+# First run bit.rb, then run this program as ruby bit.rb
 
 def keepAliveMessage                            # <len=0000>
     "\x00\x00\x00\x00"
@@ -28,8 +28,7 @@ end
 # TODO: weird performance with length in send
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
-    m_have = "\x00\x00\x00\x05\x04#{id}"
-    m_have
+    "\x00\x00\x00\x05\x04#{id}"
 end
 
 def bitfieldMessage(bitArray)                   # <len=0001+X><id=5><bitfield>
@@ -53,8 +52,7 @@ def requestMessage(id, beg, len)                # <len=0013><id=6><index><begin>
     id = [id].pack('N')
     beg = [beg].pack('N')
     len = [len].pack('N')
-    m_req = "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
-    m_req
+    "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
 end
 
 # TODO: pieceMessage
@@ -63,21 +61,34 @@ def cancelMessage(id, beg, len)                 # <len=0013><id=8><index><begin>
     id = [id].pack('N')
     beg = [beg].pack('N')
     len = [len].pack('N')
-    m_cancel = "\x00\x00\x00\x0d\x08#{id}#{beg}#{len}"
-    m_cancel
+    "\x00\x00\x00\x0d\x08#{id}#{beg}#{len}"
 end
 
 def portMessage(port)                           # <len=0003><id=9><listen-port>
     port = [port].pack('n')
-    m_port = "\x00\x00\x00\x03\x09#{port}"
-    m_port
+    "\x00\x00\x00\x03\x09#{port}"
 end
 
-port = ARGV[0]
+cSock = TCPSocket.open("127.0.0.1", 2000)
 
-cSock = TCPSocket.open("127.0.0.1", port)
-
+test = keepAliveMessage
+cSock.write(test)
+test = chokeMessage
+cSock.write(test)
+test = unchokeMessage
+cSock.write(test)
+test = interestedMessage
+cSock.write(test)
+test = notInterestedMessage
+cSock.write(test)
+test = haveMessage(3)
+cSock.write(test)
 test = bitfieldMessage([1,1,1,1,1,1,1,1,1])
+cSock.write(test)
+test = requestMessage(1, 0, 128)
+cSock.write(test)
+#TODO: piece
+test = cancelMessage(1, 0, 128)
 cSock.write(test)
 test = portMessage(2000)
 cSock.write(test)

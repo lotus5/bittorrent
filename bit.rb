@@ -39,8 +39,7 @@ end
 # TODO: weird performance with length in send
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
-    m_have = "\x00\x00\x00\x05\x04#{id}"
-    m_have
+    "\x00\x00\x00\x05\x04#{id}"
 end
 
 def bitfieldMessage(bitArray)                   # <len=0001+X><id=5><bitfield>
@@ -64,8 +63,7 @@ def requestMessage(id, beg, len)                # <len=0013><id=6><index><begin>
     id = [id].pack('N')
     beg = [beg].pack('N')
     len = [len].pack('N')
-    m_req = "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
-    m_req
+    "\x00\x00\x00\x0d\x06#{id}#{beg}#{len}"
 end
 
 # TODO: pieceMessage
@@ -74,14 +72,12 @@ def cancelMessage(id, beg, len)                 # <len=0013><id=8><index><begin>
     id = [id].pack('N')
     beg = [beg].pack('N')
     len = [len].pack('N')
-    m_cancel = "\x00\x00\x00\x0d\x08#{id}#{beg}#{len}"
-    m_cancel
+    "\x00\x00\x00\x0d\x08#{id}#{beg}#{len}"
 end
 
 def portMessage(port)                           # <len=0003><id=9><listen-port>
     port = [port].pack('n')
-    m_port = "\x00\x00\x00\x03\x09#{port}"
-    m_port
+    "\x00\x00\x00\x03\x09#{port}"
 end
 
 def generatePeerID()
@@ -289,7 +285,7 @@ for i in 0..(numPeers - 1) do
         s = TCPSocket.open(x[0], x[1])
         p "connected to Poole client"
         s.write(handshake)
-        p "handshake sent #{handshake.length}"
+        p "handshake sent"
 
         # parsing the received handshake
         pstrlen = s.read(1).unpack('C')
@@ -342,6 +338,7 @@ end
 
 # for testing messages parsing with the send.rb
 =begin
+print "\nBelow are the test messages\n"
 test = -1
 
 server = TCPServer.new 2000 # Server bind to port 2000
@@ -351,6 +348,7 @@ end
 
 while 1 do
     parseResponse(test)
+    print "\n"
 end
 
 test.close
