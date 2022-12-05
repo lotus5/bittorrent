@@ -36,7 +36,7 @@ end
 def notInterestedMessage                        # <len=0001><id=3>
     "\x00\x00\x00\x01\x03"
 end
-# TODO: weird performance with length in send
+
 def haveMessage(id)                             # <len=0005><id=4><piece index>
     id = [id].pack('N')
     "\x00\x00\x00\x05\x04#{id}"
@@ -294,6 +294,13 @@ for i in 0..(numPeers - 1) do
 
         #testing for receiving messages
         parseResponse(s)
+
+        s.write(requestMessage(0, 0, 16384))
+        s.gets()
+        s.gets()
+        s.gets()
+        s.gets()
+        s.gets()
 
         # testing for sending messages
         #test = haveMessage(1)
