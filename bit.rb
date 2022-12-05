@@ -121,7 +121,7 @@ def parseResponse(s)
             for i in 0..(recvBF.length - 1)
                 recvBF[i] = recvBF[i].to_s(2)
             end
-            recvBF = recvBF.join("")
+            recvBF = recvBF.join("").split("").map(&:to_i)
             p "bitfield received: #{recvBF}"
         elsif mId == 6
             # received a request message
@@ -294,6 +294,26 @@ for i in 0..(numPeers - 1) do
 
         #testing for receiving messages
         parseResponse(s)
+
+        # --- Begin Downloading File (WIP)
+
+        # let peer know I am unchoked
+        unchoke = unchokeMessage();
+        s.write(unchoke)
+
+        # let peer know i am interested
+        interested = interestedMessage();
+        s.write(interested)
+
+        parseResponse(s)    # receive the unchoke message
+
+        request = requestMessage(0, 0, 1280)
+        s.write(request)
+        
+        x = s.read(1289)
+        p x
+
+        # --- End Downloading File 
 
         # testing for sending messages
         #test = haveMessage(1)
