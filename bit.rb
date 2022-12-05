@@ -117,11 +117,11 @@ def parseResponse(s)
         elsif (mId == 5)
             # received a bitfield message
             p "received a bitfield message"
-            recvBF = s.read(len - 1).bytes.each_slice(6).to_a()[0]
+            recvBF = s.read(len - 1).bytes.each_slice(8).to_a()[0]
             for i in 0..(recvBF.length - 1)
                 recvBF[i] = recvBF[i].to_s(2)
             end
-            recvBF = recvBF.join("")
+            recvBF = recvBF.join("").split("").map(&:to_i)
             p "bitfield received: #{recvBF}"
         elsif mId == 6
             # received a request message
@@ -133,6 +133,10 @@ def parseResponse(s)
         elsif mId == 7
             # received a piece message
             p "received a piece message"
+            pId = s.read(4).unpack('N')[0]
+            pBeg = s.read(4).unpack('N')[0]
+            pData = s.read(len - 9)
+            p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData}"
         elsif mId == 8
             # received a cancel message
             p "received a cancel message"
@@ -295,12 +299,30 @@ for i in 0..(numPeers - 1) do
         #testing for receiving messages
         parseResponse(s)
 
-        s.write(requestMessage(0, 0, 16384))
-        s.gets()
-        s.gets()
-        s.gets()
-        s.gets()
-        s.gets()
+        # --- Begin Downloading File (WIP)
+
+        # let peer know I am unchoked
+        unchoke = unchokeMessage();
+        s.write(unchoke)
+
+        # let peer know i am interested
+        interested = interestedMessage();
+        s.write(interested)
+
+        parseResponse(s)    # receive the unchoke message
+
+        # the size is set to 32 for testing purposes only, should be 16384 for real implementation
+        request = requestMessage(0, 0, 32)
+        s.write(request)
+        
+        #x = s.read(1289)
+        #p x
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
+        parseResponse(s)
+
+        # --- End Downloading File 
 
         # testing for sending messages
         #test = haveMessage(1)
