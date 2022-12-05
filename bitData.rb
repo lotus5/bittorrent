@@ -1,6 +1,5 @@
-
 class BitData
-    # INCOMPLETE: this still needs work, I am not entirely sure how to parse/receive/set the bitmap
+    # INCOMPLETE: this still needs work, need to implement parse/receive/set the bitmap
     attr_accessor :bitField, :bitMap
     def initialize(numPiece, pieceLen)
         @bitField = Array.new(numPiece, 0)
