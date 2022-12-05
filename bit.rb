@@ -89,6 +89,7 @@ end
 
 # Parsing the message from other peers
 def parseResponse(s)
+    print "\n"
     len = s.read(4).unpack('N')[0]
         p "message length: #{len}"
     if len == 0
@@ -292,42 +293,25 @@ for i in 0..(numPeers - 1) do
         p "handshake sent"
 
         # parsing the received handshake
+        # handshake don't share the same format with the others, so only this one is read in by fixed length
+        # all other messages should be read in by calling parseResponse(socket)
         pstrlen = s.read(1).unpack('C')
         recvHs = s.read(pstrlen[0] + 8 + 20 + 20)
         #p recvHs
-
-        #testing for receiving messages
-        parseResponse(s)
-
-        # --- Begin Downloading File (WIP)
-
-        # let peer know I am unchoked
-        unchoke = unchokeMessage();
-        s.write(unchoke)
-
-        # let peer know i am interested
-        interested = interestedMessage();
-        s.write(interested)
-
-        parseResponse(s)    # receive the unchoke message
+        # need to receive the unchoke first, otherwise the peer will ignore our request
+        parseResponse(s)    #---> bitField
+        parseResponse(s)    #---> unchoke
 
         # the size is set to 32 for testing purposes only, should be 16384 for real implementation
         request = requestMessage(0, 0, 32)
         s.write(request)
+        #testing for receiving messages
         
-        #x = s.read(1289)
-        #p x
         parseResponse(s)
         parseResponse(s)
         parseResponse(s)
         parseResponse(s)
 
-        # --- End Downloading File 
-
-        # testing for sending messages
-        #test = haveMessage(1)
-        #p test
-        #s.write(test)
     else
         #p "not the Poole client, ignoring"
         s = 9999
@@ -337,9 +321,6 @@ for i in 0..(numPeers - 1) do
     peerState[i][AMINTERESTED] = 0
     peerState[i][PEERCHOKING] = 1
     peerState[i][PEERINTERESTED] = 0
-    #making connections with peers
-    #peerAddr = peerInfo[i].split(":")
-    #pSock[i] = TCPSocket.open(peerAddr[0], peerAddr[1])
 end
 # p peerState
 
