@@ -309,7 +309,7 @@ for i in 0..(numPeers - 1) do
         peerState[i][PEERINTERESTED] = 0
     end
 =end
-    if (peerInfo[i] == "128.8.126.63:55555") then
+    if (peerInfo[i] == "128.8.126.63:54545") then
         p "connecting to Poole client"
         x = peerInfo[i].split(":")
         s = TCPSocket.open(x[0], x[1])
