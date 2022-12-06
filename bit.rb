@@ -4,6 +4,7 @@ require 'socket'
 require 'cgi'
 require 'ostruct'
 require_relative 'bitData'
+require_relative 'p2pconnection'
 
 # call the program with ruby bit.rb <filename.torrent> <1 for compact, 0 for noncompact>
 # pieces_hash is an array of hashes for each piece of the file
@@ -321,6 +322,9 @@ for i in 0..(numPeers - 1) do
         pstrlen = s.read(1).unpack('C')
         recvHs = s.read(pstrlen[0] + 8 + 20 + 20)
         #p recvHs
+
+        # connection WIP
+        # waitforResponse(peerState, (numPeers - 1))
 
         #testing for receiving messages
         parseResponse(s)
