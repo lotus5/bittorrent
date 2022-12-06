@@ -152,7 +152,7 @@ def parseResponse(s)
             pId = s.read(4).unpack('N')[0]
             pBeg = s.read(4).unpack('N')[0]
             pData = s.read(len - 9)
-            p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData}"
+            p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData.length}"
             message.pId = pId
             message.pBeg = pBeg
             message.pData = pData
@@ -190,7 +190,7 @@ name = meta["info"]["name"]
 totalLen = meta["info"]["length"]
 pieceLen = meta["info"]["piece length"]
 numPiece = ((totalLen.to_f)/(pieceLen.to_f)).ceil
-bitStorage = BitData.new(numPiece, pieceLen, totalLen)
+#bitStorage = BitData.new(numPiece, pieceLen, totalLen)
 
 # Hashes for each piece
 pieces_hash = meta["info"]["pieces"].scan(/.{20}/)
@@ -341,22 +341,36 @@ for i in 0..(numPeers - 1) do
         # the size is set to 32 for testing purposes only, should be 16384 for real implementation
 
         range = 0..numPiece - 1
-        count = 0
-        result = []
+        range2 = 0..((pieceLen/16384).ceil() - 1)   
 
-        range.each do |idx|
-            request = requestMessage(0, count, 256)
-            s.write(request)
-            message = parseResponse(s)
-            
-            data = message.pData.split("")
+        range.each do |i|
+            piece = 16384
+            count = 0
 
-            result.push(*data)
-            count += data.length
+            data = ""       # holds the current piece (we are making the assumption that the data is a string)
+
+            range2.each do |j|
+                if (totalLen - count) < 16384 then      # If the remaining piece length is less than 16384
+                    piece = totalLen
+                else
+                    piece = 16384
+                end
+                print "\ninfo: piece #{piece} | totalLen #{totalLen}\n"
+                request = requestMessage(i, count, piece)
+                s.write(request)
+                message = parseResponse(s)
+                
+                data += message.pData          # Assumption: we are receiving strings/array fo strings
+                count += data.length
+                totalLen -= piece
+            end
+
+            print "\nHash testing: #{Digest::SHA1.hexdigest(data)} | #{pieces_hash[i].first()}"
+            if (Digest::SHA1.hexdigest(data).eql?(pieces_hash[i].first())) then
+                File.write(name, data, mode: "a")
+            end
+
         end
-
-        print "\nPieces so far:\n#{result.join}\nLength: #{result.length}\n"
-
 
         # --- End Downloading File 
 
