@@ -2,6 +2,8 @@ require 'bencode'
 require 'digest/sha1'
 require 'socket'
 require 'cgi'
+require 'ostruct'
+require_relative 'bitData'
 
 # call the program with ruby bit.rb <filename.torrent> <1 for compact, 0 for noncompact>
 # pieces_hash is an array of hashes for each piece of the file
@@ -102,6 +104,7 @@ def parseResponse(s)
     else
         mId = s.read(1).unpack('C')[0]
         p "message id: #{mId}"
+        message = OpenStruct.new
         if mId == 0
             # received a choke message
             p "received a choke message"
@@ -119,6 +122,8 @@ def parseResponse(s)
             p "received a have message"
             pieceId = s.read(4).unpack('N')[0]
             p "Peer have pieceId: #{pieceId}"
+            message.pieceId = pieceId
+            message
         elsif (mId == 5)
             # received a bitfield message
             p "received a bitfield message"
@@ -128,6 +133,8 @@ def parseResponse(s)
             end
             recvBF = recvBF.join("").split("").map(&:to_i)
             p "bitfield received: #{recvBF}"
+            message.recvBF = recvBF
+            message
         elsif mId == 6
             # received a request message
             p "received a request message"
@@ -135,6 +142,10 @@ def parseResponse(s)
             pBeg = s.read(4).unpack('N')[0]
             pLen = s.read(4).unpack('N')[0]
             p "pieceId: #{pId}, begin: #{pBeg}, length: #{pLen}"
+            message.pId = pId
+            message.pBeg = pBeg
+            message.pLen = pLen
+            message
         elsif mId == 7
             # received a piece message
             p "received a piece message"
@@ -142,6 +153,10 @@ def parseResponse(s)
             pBeg = s.read(4).unpack('N')[0]
             pData = s.read(len - 9)
             p "pieceId: #{pId}, begin: #{pBeg}, data: #{pData}"
+            message.pId = pId
+            message.pBeg = pBeg
+            message.pData = pData
+            message
         elsif mId == 8
             # received a cancel message
             p "received a cancel message"
@@ -149,11 +164,17 @@ def parseResponse(s)
             pBeg = s.read(4).unpack('N')[0]
             pLen = s.read(4).unpack('N')[0]
             p "pieceId: #{pId}, begin: #{pBeg}, length: #{pLen}"
+            message.pId = pId
+            message.pBeg = pBeg
+            message.pLen = pLen
+            message
         elsif mId == 9
             # received a port message
             p "received a port message"
             port = s.read(2).unpack('n')[0]
             p "port: #{port}"
+            message.port = port
+            message
         end
     end
 end
@@ -169,7 +190,7 @@ name = meta["info"]["name"]
 totalLen = meta["info"]["length"]
 pieceLen = meta["info"]["piece length"]
 numPiece = ((totalLen.to_f)/(pieceLen.to_f)).ceil
-bitField = Array.new(numPiece, 0)
+bitStorage = BitData.new(numPiece, pieceLen, totalLen)
 
 # Hashes for each piece
 pieces_hash = meta["info"]["pieces"].scan(/.{20}/)
@@ -305,6 +326,7 @@ for i in 0..(numPeers - 1) do
         parseResponse(s)
 
         # --- Begin Downloading File (WIP)
+        # Assumption: talking solely with poole peer, downloading all data from peer
 
         # let peer know I am unchoked
         unchoke = unchokeMessage();
@@ -317,15 +339,24 @@ for i in 0..(numPeers - 1) do
         parseResponse(s)    # receive the unchoke message
 
         # the size is set to 32 for testing purposes only, should be 16384 for real implementation
-        request = requestMessage(0, 0, 32)
-        s.write(request)
-        
-        #x = s.read(1289)
-        #p x
-        parseResponse(s)
-        parseResponse(s)
-        parseResponse(s)
-        parseResponse(s)
+
+        range = 0..numPiece - 1
+        count = 0
+        result = []
+
+        range.each do |idx|
+            request = requestMessage(0, count, 256)
+            s.write(request)
+            message = parseResponse(s)
+            
+            data = message.pData.split("")
+
+            result.push(*data)
+            count += data.length
+        end
+
+        print "\nPieces so far:\n#{result.join}\nLength: #{result.length}\n"
+
 
         # --- End Downloading File 
 
