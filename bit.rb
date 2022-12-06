@@ -2,6 +2,7 @@ require 'bencode'
 require 'digest/sha1'
 require 'socket'
 require 'cgi'
+require_relative 'p2pconnection'
 
 # call the program with ruby bit.rb <filename.torrent> <1 for compact, 0 for noncompact>
 # pieces_hash is an array of hashes for each piece of the file
@@ -324,6 +325,12 @@ for i in 0..(numPeers - 1) do
     peerState[i][PEERCHOKING] = 1
     peerState[i][PEERINTERESTED] = 0
 end
+
+#send requests to peer
+p "getting into waitforResponse"
+waitforResponse(peerState, (numPeers - 1))
+
+
 # p peerState
 
 # whenever a client connects we send a biffield message (if we have a piece)
@@ -347,4 +354,3 @@ test.close
 =end
 
 cSock.close
-
